@@ -1,30 +1,24 @@
-// File: index.js (Versi Debug Secrets)
+// File: index.js (Versi Debug Timeout)
 const express = require("express");
 const axios = require("axios");
 const app = express();
 
 app.use(express.json());
 
-// Mengambil data rahasia dari Environment Variables (Secrets)
 const ROBLOX_API_URL = process.env.ROBLOX_API_URL;
 const ROBLOX_API_KEY = process.env.ROBLOX_API_KEY;
 const UNIVERSE_ID = process.env.UNIVERSE_ID;
 
-// Endpoint utama yang akan menerima notifikasi donasi dari Saweria
 app.post("/saweria-webhook", (req, res) => {
   console.log("===================================");
   console.log("Menerima webhook dari Saweria...");
 
-  // === BLOK DEBUG BARU ===
-  // Blok ini akan mencetak status setiap Secret yang kita butuhkan.
   console.log("Mengecek status Environment Variables (Secrets)...");
   console.log(`- Status ROBLOX_API_URL: ${ROBLOX_API_URL ? 'DITEMUKAN' : 'TIDAK ADA / KOSONG'}`);
   console.log(`- Status ROBLOX_API_KEY: ${ROBLOX_API_KEY ? 'DITEMUKAN' : 'TIDAK ADA / KOSONG'}`);
   console.log(`- Status UNIVERSE_ID: ${UNIVERSE_ID ? 'DITEMUKAN' : 'TIDAK ADA / KOSONG'}`);
   console.log("===================================");
-  // === AKHIR BLOK DEBUG ===
 
-  // Cek apakah semua variabel dari secrets sudah ada
   if (!ROBLOX_API_URL || !ROBLOX_API_KEY || !UNIVERSE_ID) {
     console.error("Kesalahan: Satu atau lebih Environment Variables tidak ditemukan. Proses dihentikan.");
     return res.status(500).send("Server configuration error.");
@@ -39,24 +33,33 @@ app.post("/saweria-webhook", (req, res) => {
       message: donationData.message || "",
     };
 
+    console.log("Mencoba mengirim data ke Roblox API dengan timeout 5 detik...");
     axios.post(
         `${ROBLOX_API_URL}/v1/universes/${UNIVERSE_ID}/topics/SaweriaDonation`,
         { message: JSON.stringify(payload) },
-        { headers: { "x-api-key": ROBLOX_API_KEY, "Content-Type": "application/json" } }
+        { 
+          headers: { "x-api-key": ROBLOX_API_KEY, "Content-Type": "application/json" },
+          timeout: 5000 // Menambahkan timeout 5 detik
+        }
     ).then(response => {
         console.log("Berhasil mengirim data donasi ke Roblox.");
     }).catch(error => {
-        console.error("Gagal mengirim data ke Roblox:", error.response ? error.response.data : error.message);
+        // Log yang lebih detail untuk mendeteksi timeout
+        if (error.code === 'ECONNABORTED') {
+            console.error("Gagal mengirim data ke Roblox: Request timed out (melebihi 5 detik). Ini kemungkinan besar adalah masalah jaringan antara Render dan Roblox.");
+        } else {
+            console.error("Gagal mengirim data ke Roblox:", error.response ? error.response.data : error.message);
+        }
     });
 
-    res.status(200).send("Donation received and processing.");
+    res.status(200).send("Donation received, processing request to Roblox.");
   } else {
     res.status(400).send("Invalid data format.");
   }
 });
 
 app.get("/", (req, res) => {
-    res.send("Server perantara untuk Saweria-Roblox aktif! (v_debug_secrets)");
+    res.send("Server perantara untuk Saweria-Roblox aktif! (v_debug_timeout)");
 });
 
 const PORT = process.env.PORT || 3000;
