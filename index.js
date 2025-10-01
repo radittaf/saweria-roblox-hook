@@ -1,4 +1,3 @@
-// File: index.js (Versi Debug Timeout)
 const express = require("express");
 const axios = require("axios");
 const app = express();
@@ -44,7 +43,6 @@ app.post("/saweria-webhook", (req, res) => {
     ).then(response => {
         console.log("Berhasil mengirim data donasi ke Roblox.");
     }).catch(error => {
-        // Log yang lebih detail untuk mendeteksi timeout
         if (error.code === 'ECONNABORTED') {
             console.error("Gagal mengirim data ke Roblox: Request timed out (melebihi 5 detik). Ini kemungkinan besar adalah masalah jaringan antara Render dan Roblox.");
         } else {
